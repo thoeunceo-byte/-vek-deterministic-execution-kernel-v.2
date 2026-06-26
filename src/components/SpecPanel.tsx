@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { BookOpen, FileCode, Check, Copy } from 'lucide-react';
+import { playClick, playSuccess } from '../utils/audio';
 
 export const SpecPanel: React.FC = () => {
   const [copied, setCopied] = useState(false);
@@ -30,7 +31,7 @@ pub struct TraceStep {
     pub input_event: String,
     pub pre_state: State,
     pub post_state: State,
-    pub hash: String, // h_n = SHA255(index + event + pre_state + post_state)
+    pub hash: String, // h_n = SHA256(index + event + pre_state + post_state)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -170,20 +171,21 @@ impl ReplayEngine {
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(rustCode);
+    playSuccess();
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden" id="spec-panel">
+    <div className="bg-sleek-card border border-sleek-border rounded-xl overflow-hidden text-sleek-text" id="spec-panel">
       {/* Tabs */}
-      <div className="flex border-b border-zinc-900 bg-zinc-950 px-2 pt-2">
+      <div className="flex border-b border-sleek-border bg-sleek-sidebar px-2 pt-2">
         <button
-          onClick={() => setActiveTab('spec')}
-          className={`px-4 py-2 text-xs font-medium border-b-2 font-display flex items-center gap-1.5 transition-all ${
+          onClick={() => { playClick(); setActiveTab('spec'); }}
+          className={`px-4 py-2.5 text-xs font-semibold border-b-2 font-display flex items-center gap-1.5 transition-all cursor-pointer ${
             activeTab === 'spec'
-              ? 'border-emerald-500 text-zinc-100'
-              : 'border-transparent text-zinc-400 hover:text-zinc-200'
+              ? 'border-sleek-accent text-sleek-text'
+              : 'border-transparent text-sleek-text-muted hover:text-sleek-text'
           }`}
           id="tab-spec-math"
         >
@@ -191,11 +193,11 @@ impl ReplayEngine {
           <span>Equation Specification</span>
         </button>
         <button
-          onClick={() => setActiveTab('rust')}
-          className={`px-4 py-2 text-xs font-medium border-b-2 font-display flex items-center gap-1.5 transition-all ${
+          onClick={() => { playClick(); setActiveTab('rust'); }}
+          className={`px-4 py-2.5 text-xs font-semibold border-b-2 font-display flex items-center gap-1.5 transition-all cursor-pointer ${
             activeTab === 'rust'
-              ? 'border-emerald-500 text-zinc-100'
-              : 'border-transparent text-zinc-400 hover:text-zinc-200'
+              ? 'border-sleek-accent text-sleek-text'
+              : 'border-transparent text-sleek-text-muted hover:text-sleek-text'
           }`}
           id="tab-spec-rust"
         >
@@ -209,57 +211,57 @@ impl ReplayEngine {
           /* MATHEMATICAL SPEC VIEW */
           <div className="space-y-4">
             <div>
-              <h3 className="text-zinc-100 text-sm font-bold font-display">The Irreducible Execution Equation</h3>
-              <p className="text-zinc-400 text-xs mt-1 leading-relaxed">
+              <h3 className="text-sleek-text text-sm font-bold font-display">The Irreducible Execution Equation</h3>
+              <p className="text-sleek-text-muted text-xs mt-1 leading-relaxed">
                 VEK-Core v0.1 reduces ledger state correctness guarantees into a single mathematical equation of deterministic state projections and hash chain chaining.
               </p>
             </div>
 
             {/* Formula Cards */}
             <div className="space-y-3 font-mono text-xs">
-              <div className="bg-zinc-900 border border-zinc-850 p-3.5 rounded-lg flex flex-col gap-2">
-                <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">
+              <div className="bg-sleek-sidebar border border-sleek-border p-3.5 rounded-lg flex flex-col gap-2">
+                <span className="text-[10px] text-sleek-text-muted uppercase font-bold tracking-widest">
                   1. State Transition Projection Law
                 </span>
-                <div className="text-emerald-400 text-sm py-1 border-b border-zinc-850">
-                  f(σ, e) → (σ', h_n)
+                <div className="text-sleek-accent text-sm py-1 border-b border-sleek-border">
+                  f(σ, e) → (σ&apos;, h_n)
                 </div>
-                <div className="text-zinc-400 text-[11px] leading-relaxed mt-1">
-                  Given the pre-state <code className="text-zinc-200">σ = (value, clock)</code> and incoming event <code className="text-zinc-200">e</code>, the kernel deterministically projects the post-state <code className="text-zinc-200">σ'</code> and generates a distinct step signature <code className="text-zinc-200">h_n</code>.
+                <div className="text-sleek-text-muted text-[11px] leading-relaxed mt-1">
+                  Given the pre-state <code className="bg-sleek-card border border-sleek-border px-1.5 py-0.5 rounded text-sleek-accent">σ = (value, clock)</code> and incoming event <code className="bg-sleek-card border border-sleek-border px-1.5 py-0.5 rounded text-sleek-accent">e</code>, the kernel deterministically projects the post-state <code className="bg-sleek-card border border-sleek-border px-1.5 py-0.5 rounded text-sleek-accent">σ&apos;</code> and generates a distinct step signature <code className="bg-sleek-card border border-sleek-border px-1.5 py-0.5 rounded text-sleek-accent">h_n</code>.
                 </div>
               </div>
 
-              <div className="bg-zinc-900 border border-zinc-850 p-3.5 rounded-lg flex flex-col gap-2">
-                <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">
+              <div className="bg-sleek-sidebar border border-sleek-border p-3.5 rounded-lg flex flex-col gap-2">
+                <span className="text-[10px] text-sleek-text-muted uppercase font-bold tracking-widest">
                   2. Step Hash Equation
                 </span>
-                <div className="text-emerald-400 text-sm py-1 border-b border-zinc-850">
+                <div className="text-sleek-accent text-sm py-1 border-b border-sleek-border">
                   h_n = SHA256(index ∥ event ∥ σ_pre ∥ σ_post)
                 </div>
-                <div className="text-zinc-400 text-[11px] leading-relaxed mt-1">
-                  The step signature <code className="text-zinc-200">h_n</code> mathematically freezes the transition context. Any modifications to the indices, commands, input states, or projected outcomes instantly alters <code className="text-zinc-200">h_n</code>.
+                <div className="text-sleek-text-muted text-[11px] leading-relaxed mt-1">
+                  The step signature <code className="bg-sleek-card border border-sleek-border px-1.5 py-0.5 rounded text-sleek-accent">h_n</code> mathematically freezes the transition context. Any modifications to the indices, commands, input states, or projected outcomes instantly alters <code className="bg-sleek-card border border-sleek-border px-1.5 py-0.5 rounded text-sleek-accent">h_n</code>.
                 </div>
               </div>
 
-              <div className="bg-zinc-900 border border-zinc-850 p-3.5 rounded-lg flex flex-col gap-2">
-                <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">
+              <div className="bg-sleek-sidebar border border-sleek-border p-3.5 rounded-lg flex flex-col gap-2">
+                <span className="text-[10px] text-sleek-text-muted uppercase font-bold tracking-widest">
                   3. Ledger Chain Cumulative Law
                 </span>
-                <div className="text-emerald-400 text-sm py-1 border-b border-zinc-850">
+                <div className="text-sleek-accent text-sm py-1 border-b border-sleek-border">
                   L_n = SHA256(L_n-1 + h_n)
                 </div>
-                <div className="text-zinc-400 text-[11px] leading-relaxed mt-1">
-                  The cumulative signature <code className="text-zinc-200">L_n</code> hashes the previous block's signature <code className="text-zinc-200">L_n-1</code> with the current step's signature. This establishes an unbreakable tamper-proof cryptographic timeline.
+                <div className="text-sleek-text-muted text-[11px] leading-relaxed mt-1">
+                  The cumulative signature <code className="bg-sleek-card border border-sleek-border px-1.5 py-0.5 rounded text-sleek-accent">L_n</code> hashes the previous block&apos;s signature <code className="bg-sleek-card border border-sleek-border px-1.5 py-0.5 rounded text-sleek-accent">L_n-1</code> with the current step&apos;s signature. This establishes an unbreakable tamper-proof cryptographic timeline.
                 </div>
               </div>
             </div>
 
-            <div className="border-t border-zinc-900 pt-3">
-              <h4 className="text-zinc-300 font-display font-semibold text-xs mb-1">
+            <div className="border-t border-sleek-border pt-3">
+              <h4 className="text-sleek-text font-display font-semibold text-xs mb-1">
                 Zero-Trust Audit Proof
               </h4>
-              <p className="text-zinc-500 text-[11px] leading-relaxed font-sans">
-                A verification replay evaluates the chronological ledger. If any intermediate value is memory-altered, the re-computed <code className="text-zinc-200">L_n</code> signature breaks instantly. Security audits can verify complete ledger integrity in $O(N)$ operations.
+              <p className="text-sleek-text-muted text-[11px] leading-relaxed font-sans">
+                A verification replay evaluates the chronological ledger. If any intermediate value is memory-altered, the re-computed <code className="bg-sleek-card border border-sleek-border px-1.5 py-0.5 rounded text-sleek-accent">L_n</code> signature breaks instantly. Security audits can verify complete ledger integrity in $O(N)$ operations.
               </p>
             </div>
           </div>
@@ -267,17 +269,17 @@ impl ReplayEngine {
           /* RUST KERNEL VIEW */
           <div className="space-y-2">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10.5px] font-mono text-zinc-400">vek_core_v01.rs (240 lines)</span>
+              <span className="text-[10.5px] font-mono text-sleek-text-muted">vek_core_v01.rs (240 lines)</span>
               <button
                 onClick={handleCopyCode}
-                className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-850 rounded text-[10px] font-mono text-zinc-400 hover:text-zinc-200 flex items-center gap-1 transition-colors"
+                className="px-2.5 py-1 bg-sleek-sidebar hover:bg-sleek-border border border-sleek-border rounded text-[10px] font-mono text-sleek-text-muted hover:text-sleek-text flex items-center gap-1 transition-colors cursor-pointer"
                 id="btn-copy-rust-code"
               >
-                {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copied ? <Check className="w-3 h-3 text-sleek-success" /> : <Copy className="w-3 h-3" />}
                 <span>Copy Code</span>
               </button>
             </div>
-            <pre className="bg-zinc-900 p-3.5 rounded-lg text-[10.5px] font-mono text-zinc-300 overflow-x-auto max-h-[380px] border border-zinc-850 select-all leading-relaxed whitespace-pre">
+            <pre className="bg-sleek-sidebar p-3.5 rounded-lg text-[10.5px] font-mono text-sleek-text overflow-x-auto max-h-[380px] border border-sleek-border select-all leading-relaxed whitespace-pre">
               {rustCode}
             </pre>
           </div>

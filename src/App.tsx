@@ -4,14 +4,14 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { ShieldCheck, Terminal, AlertCircle, FileCode, Play, Info } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { State, Block, FalsificationReport } from './types';
 import { Header } from './components/Header';
 import { ControlPanel } from './components/ControlPanel';
 import { LedgerTimeline } from './components/LedgerTimeline';
 import { AuditorPanel } from './components/AuditorPanel';
 import { SpecPanel } from './components/SpecPanel';
-import { executeTransaction, verifyLedger, wrappingAdd, wrappingSub } from './utils/kernel';
+import { executeTransaction, verifyLedger, wrappingAdd, wrappingSub, getShadowPrediction } from './utils/kernel';
 import { calculateSeedHash, calculateStepHash, calculateLedgerHash } from './utils/crypto';
 
 export default function App() {
@@ -21,6 +21,14 @@ export default function App() {
   const [ledger, setLedger] = useState<Block[]>([]);
   const [halted, setHalted] = useState<boolean>(false);
   const [haltReason, setHaltReason] = useState<string>('');
+  
+  // Shadow Track Adaptive state
+  const [threshold, setThreshold] = useState<number>(120);
+  const [shadowTrackEnabled, setShadowTrackEnabled] = useState<boolean>(true);
+
+  const shadowPrediction = useMemo(() => {
+    return getShadowPrediction(ledger, seed);
+  }, [ledger, seed]);
   
   // Terminal Logs
   const [logs, setLogs] = useState<string[]>([
@@ -43,7 +51,7 @@ export default function App() {
     const tempLedger: Block[] = [];
 
     events.forEach((event, i) => {
-      const res = executeTransaction(event, state, tempLedger, demoSeed);
+      const res = executeTransaction(event, state, tempLedger, demoSeed, threshold, shadowTrackEnabled);
       if (res.success && res.postState && res.block) {
         tempLedger.push(res.block);
         state = res.postState;
@@ -70,8 +78,8 @@ export default function App() {
 
   // 3. Compute real-time Replay Audit report whenever ledger, seed or state changes
   const auditReport = useMemo<FalsificationReport>(() => {
-    return verifyLedger(seed, ledger);
-  }, [ledger, seed]);
+    return verifyLedger(seed, ledger, threshold, shadowTrackEnabled);
+  }, [ledger, seed, threshold, shadowTrackEnabled]);
 
   // 4. Reset Kernel back to initial genesis seed
   const handleReset = () => {
@@ -105,7 +113,7 @@ export default function App() {
   const handleExecute = (event: string) => {
     if (halted) return;
 
-    const res = executeTransaction(event, currentState, ledger, seed);
+    const res = executeTransaction(event, currentState, ledger, seed, threshold, shadowTrackEnabled);
     
     if (res.success && res.postState && res.block) {
       const updatedLedger = [...ledger, res.block];
@@ -113,13 +121,16 @@ export default function App() {
       setBackupLedger(JSON.parse(JSON.stringify(updatedLedger)));
       setCurrentState(res.postState);
       
+      const isBlockSynthetic = res.block.step.is_synthetic;
+      
       setLogs((prev) => [
-        `[EXEC] Successful state transition: "${event}"`,
+        `[EXEC] Successful state transition: "${event}"${isBlockSynthetic ? ' [SYNTHETIC BYPASS ACTIVE]' : ''}`,
         `  -> State projected: value = ${res.postState!.value}, clock = ${res.postState!.logical_clock}`,
+        isBlockSynthetic ? `  -> [SHADOW OVERRIDE] Input deviated too far from prediction ŝ_n: ${res.block!.step.shadow_prediction}` : '',
         `  -> Step Hash h_${ledger.length}: ${res.block!.step.hash.slice(0, 16)}...`,
         `  -> Cumulative Hash L_${ledger.length}: ${res.block!.chain_hash.slice(0, 16)}...`,
-        ...prev,
-      ]);
+        ...prev.filter(Boolean),
+      ].filter(Boolean));
     } else {
       // Emergency Active Halt triggered
       setHalted(true);
@@ -225,17 +236,22 @@ export default function App() {
 
     ledger.forEach((block, i) => {
       const event = block.step.input_event;
-      let postValue = virtualState.value;
+      let proposedValue = virtualState.value;
       const postClock = virtualState.logical_clock + 1;
 
       // Deterministic arithmetic logic
       if (event.startsWith("ADD:")) {
         const val = parseInt(event.slice(4), 10) || 0;
-        postValue = wrappingAdd(postValue, val);
+        proposedValue = wrappingAdd(proposedValue, val);
       } else if (event.startsWith("SUB:")) {
         const val = parseInt(event.slice(4), 10) || 0;
-        postValue = wrappingSub(postValue, val);
+        proposedValue = wrappingSub(proposedValue, val);
       }
+
+      const stepShadowPrediction = getShadowPrediction(healedLedger, seed);
+      const deviation = Math.abs(proposedValue - stepShadowPrediction);
+      const isSynthetic = shadowTrackEnabled && (deviation > threshold);
+      const postValue = isSynthetic ? stepShadowPrediction : proposedValue;
 
       const postState: State = { value: postValue, logical_clock: postClock };
       const stepHash = calculateStepHash(i, event, virtualState, postState);
@@ -248,6 +264,8 @@ export default function App() {
           pre_state: { ...virtualState },
           post_state: postState,
           hash: stepHash,
+          is_synthetic: isSynthetic,
+          shadow_prediction: stepShadowPrediction
         },
         chain_hash: chainHash,
       };
@@ -265,7 +283,7 @@ export default function App() {
 
     setLogs((prev) => [
       `[HEALING] Ledger Healing Protocol completed successfully!`,
-      `  -> Sequentially re-calculated pre-states, post-states, and cryptographic hashes for ${healedLedger.length} blocks.`,
+      `  -> Sequentially re-calculated pre-states, post-states, and cryptographic hashes for ${healedLedger.length} blocks using Shadow Track predictions.`,
       `  -> Chain re-signed. Current Integrity: SECURED.`,
       ...prev,
     ]);
@@ -276,7 +294,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans flex flex-col selection:bg-emerald-500/30 selection:text-emerald-200" id="vek-root">
+    <div className="min-h-screen bg-sleek-bg sleek-grid-bg text-sleek-text font-sans flex flex-col selection:bg-sleek-accent/20 selection:text-sleek-accent" id="vek-root">
       {/* 1. Header component */}
       <Header
         seed={seed}
@@ -299,11 +317,17 @@ export default function App() {
             halted={halted}
             logs={logs}
             onClearLogs={handleClearLogs}
+            threshold={threshold}
+            setThreshold={setThreshold}
+            shadowTrackEnabled={shadowTrackEnabled}
+            setShadowTrackEnabled={setShadowTrackEnabled}
+            shadowPrediction={shadowPrediction}
+            currentStateValue={currentState.value}
           />
         </div>
 
         {/* Center column: Interactive visual timeline (4/12 grid span) */}
-        <div className="lg:col-span-4 bg-zinc-900/30 border border-zinc-900 rounded-2xl p-4 flex flex-col gap-4 overflow-y-auto max-h-[calc(100vh-140px)] scrollbar-thin">
+        <div className="lg:col-span-4 bg-sleek-sidebar border border-sleek-border rounded-2xl p-4 flex flex-col gap-4 overflow-y-auto max-h-[calc(100vh-140px)] scrollbar-thin">
           <LedgerTimeline
             seed={seed}
             ledger={ledger}
@@ -328,11 +352,11 @@ export default function App() {
       </main>
 
       {/* 3. Footer */}
-      <footer className="border-t border-zinc-900 p-3 bg-zinc-950 text-center text-[10.5px] text-zinc-600 font-mono flex items-center justify-center gap-4 shrink-0" id="vek-footer">
+      <footer className="border-t border-sleek-border p-3 bg-sleek-sidebar text-center text-[11px] text-sleek-text-muted font-mono flex items-center justify-center gap-4 shrink-0" id="vek-footer">
         <span>VEK-Core Specification: v0.1-Release</span>
-        <span className="text-zinc-800">•</span>
-        <span className="flex items-center gap-1">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+        <span className="text-sleek-border">•</span>
+        <span className="flex items-center gap-1.5">
+          <ShieldCheck className="w-3.5 h-3.5 text-sleek-success" />
           Deterministic Cryptographic Chaining
         </span>
       </footer>

@@ -6,6 +6,7 @@
 import React from 'react';
 import { Cpu, RotateCcw, ShieldCheck, ShieldAlert, Zap } from 'lucide-react';
 import { State } from '../types';
+import { playPower } from '../utils/audio';
 
 interface HeaderProps {
   seed: number;
@@ -29,23 +30,23 @@ export const Header: React.FC<HeaderProps> = ({
   onAddSampleLedger,
 }) => {
   return (
-    <header className="border-b border-zinc-800 bg-zinc-950 p-4 sticky top-0 z-40" id="vek-header">
+    <header className="border-b border-sleek-border bg-sleek-card p-4 sticky top-0 z-40 text-sleek-text" id="vek-header">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         {/* Logo and Core Identity */}
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-emerald-950/50 border border-emerald-500/30 text-emerald-400">
+          <div className="p-2.5 rounded-lg bg-sleek-success-dark/15 border border-sleek-success/40 text-sleek-success">
             <Cpu className="w-6 h-6 animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="font-display text-lg md:text-xl font-bold text-zinc-100 tracking-tight">
-                VEK-Core v0.1
+              <h1 className="font-display text-lg md:text-xl font-bold text-sleek-text tracking-tight">
+                VEK-CORE v0.1
               </h1>
-              <span className="font-mono text-[10px] px-2 py-0.5 rounded border border-zinc-800 bg-zinc-900 text-zinc-400 uppercase tracking-wider">
-                Verifiable Execution Kernel
+              <span className="font-mono text-[10px] px-2 py-0.5 rounded border border-sleek-border bg-sleek-sidebar text-sleek-text-muted uppercase tracking-wider">
+                Auditor Engine
               </span>
             </div>
-            <p className="text-xs text-zinc-400 mt-0.5">
+            <p className="text-xs text-sleek-text-muted mt-0.5">
               Zero-Trust Ledger Verification & State Machine Auditor
             </p>
           </div>
@@ -53,38 +54,38 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Live Kernel Metrics */}
         <div className="flex flex-wrap items-center gap-2 md:gap-4 font-mono text-xs">
-          <div className="bg-zinc-900 border border-zinc-800 px-3 py-2 rounded-lg flex flex-col min-w-[70px]">
-            <span className="text-[10px] text-zinc-500 uppercase tracking-widest">Seed S₀</span>
-            <span className="text-zinc-200 font-bold">{seed}</span>
+          <div className="bg-sleek-sidebar border border-sleek-border px-3 py-2 rounded-lg flex flex-col min-w-[70px]">
+            <span className="text-[10px] text-sleek-text-muted uppercase tracking-widest">Seed S₀</span>
+            <span className="text-sleek-accent font-bold">0x{seed.toString(16).toUpperCase().padStart(4, '0')}</span>
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 px-3 py-2 rounded-lg flex flex-col min-w-[80px]">
-            <span className="text-[10px] text-zinc-500 uppercase tracking-widest">Clock σ_t</span>
-            <span className="text-zinc-200 font-bold">{currentState.logical_clock}</span>
+          <div className="bg-sleek-sidebar border border-sleek-border px-3 py-2 rounded-lg flex flex-col min-w-[80px]">
+            <span className="text-[10px] text-sleek-text-muted uppercase tracking-widest">Clock σ_t</span>
+            <span className="text-sleek-text font-bold">{currentState.logical_clock}</span>
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 px-3 py-2 rounded-lg flex flex-col min-w-[90px]">
-            <span className="text-[10px] text-zinc-500 uppercase tracking-widest">State Value</span>
-            <span className="text-emerald-400 font-bold">{currentState.value}</span>
+          <div className="bg-sleek-sidebar border border-sleek-border px-3 py-2 rounded-lg flex flex-col min-w-[90px]">
+            <span className="text-[10px] text-sleek-text-muted uppercase tracking-widest">State Value</span>
+            <span className="text-sleek-accent font-bold">{currentState.value}</span>
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 px-3 py-2 rounded-lg flex flex-col min-w-[70px]">
-            <span className="text-[10px] text-zinc-500 uppercase tracking-widest">Ledger</span>
-            <span className="text-zinc-200 font-bold">{ledgerLength} blocks</span>
+          <div className="bg-sleek-sidebar border border-sleek-border px-3 py-2 rounded-lg flex flex-col min-w-[70px]">
+            <span className="text-[10px] text-sleek-text-muted uppercase tracking-widest">Ledger</span>
+            <span className="text-sleek-text font-bold">{ledgerLength} blocks</span>
           </div>
 
           {/* Status Flag */}
           <div className="flex flex-col">
-            <span className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Kernel Integrity</span>
+            <span className="text-[10px] text-sleek-text-muted uppercase tracking-widest mb-1">Kernel Integrity</span>
             {halted ? (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-rose-950/50 border border-rose-500/40 text-rose-400 font-semibold animate-pulse">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-950/40 border border-rose-500/40 text-rose-400 font-semibold animate-pulse">
                 <ShieldAlert className="w-3.5 h-3.5" />
                 <span>HALTED</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-950/40 border border-emerald-500/40 text-emerald-400 font-semibold">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>ACTIVE</span>
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-sleek-success-dark/15 border border-sleek-success/40 text-sleek-success font-semibold">
+                <span className="w-2 h-2 rounded-full bg-sleek-success animate-ping"></span>
+                <span>KERNEL: ACTIVE</span>
               </div>
             )}
           </div>
@@ -94,25 +95,25 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2">
           {ledgerLength === 0 && (
             <button
-              onClick={onAddSampleLedger}
-              className="px-3 py-1.5 text-xs font-medium rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 transition-colors flex items-center gap-1.5"
+              onClick={() => { playPower(); onAddSampleLedger(); }}
+              className="px-3 py-1.5 text-xs font-semibold rounded-md bg-sleek-sidebar hover:bg-sleek-border text-sleek-text border border-sleek-border transition-colors flex items-center gap-1.5 cursor-pointer"
               id="btn-sample-ledger"
             >
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <Zap className="w-3.5 h-3.5 text-sleek-accent" />
               <span>Load Demo</span>
             </button>
           )}
           <button
-            onClick={onReseed}
-            className="px-3 py-1.5 text-xs font-medium rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 transition-colors"
+            onClick={() => { playPower(); onReseed(); }}
+            className="px-3 py-1.5 text-xs font-semibold rounded-md bg-sleek-sidebar hover:bg-sleek-border text-sleek-text border border-sleek-border transition-colors cursor-pointer"
             id="btn-reseed"
             title="Choose a random cryptographic genesis seed"
           >
             New Seed
           </button>
           <button
-            onClick={onReset}
-            className="px-3 py-1.5 text-xs font-medium rounded-md bg-rose-950/30 text-rose-300 border border-rose-950 hover:bg-rose-950/60 transition-colors flex items-center gap-1.5"
+            onClick={() => { playPower(); onReset(); }}
+            className="px-3 py-1.5 text-xs font-semibold rounded-md bg-rose-950/20 text-rose-400 border border-rose-950 hover:bg-rose-900/30 transition-colors flex items-center gap-1.5 cursor-pointer"
             id="btn-reset"
           >
             <RotateCcw className="w-3.5 h-3.5" />

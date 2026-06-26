@@ -14,6 +14,8 @@ export interface TraceStep {
   pre_state: State;
   post_state: State;
   hash: string; // Step Hash: h_n = SHA256(index + event + pre_state + post_state)
+  is_synthetic?: boolean;
+  shadow_prediction?: number;
 }
 
 export interface Block {

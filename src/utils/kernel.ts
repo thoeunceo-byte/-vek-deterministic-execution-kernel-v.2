@@ -37,17 +37,34 @@ export interface ExecuteResult {
   block?: Block;
 }
 
+export function getShadowPrediction(ledger: Block[], seed: number): number {
+  const len = ledger.length;
+  if (len === 0) {
+    return seed;
+  }
+  if (len === 1) {
+    return ledger[0].step.post_state.value;
+  }
+  // Linear extrapolation from the last two states
+  const val1 = ledger[len - 1].step.post_state.value;
+  const val2 = ledger[len - 2].step.post_state.value;
+  const delta = val1 - val2;
+  return val1 + delta;
+}
+
 export function executeTransaction(
   event: string,
   currentState: State,
   ledger: Block[],
-  seed: number
+  seed: number,
+  threshold: number = 50,
+  shadowTrackEnabled: boolean = true
 ): ExecuteResult {
   const preState = { ...currentState };
   const index = ledger.length;
 
   const postClock = preState.logical_clock + 1;
-  let postValue = preState.value;
+  let proposedValue = preState.value;
 
   if (event.startsWith("ADD:")) {
     const valStr = event.slice(4);
@@ -59,7 +76,7 @@ export function executeTransaction(
         halted: true
       };
     }
-    postValue = wrappingAdd(postValue, val);
+    proposedValue = wrappingAdd(proposedValue, val);
   } else if (event.startsWith("SUB:")) {
     const valStr = event.slice(4);
     const val = parseInt(valStr, 10);
@@ -70,7 +87,7 @@ export function executeTransaction(
         halted: true
       };
     }
-    postValue = wrappingSub(postValue, val);
+    proposedValue = wrappingSub(proposedValue, val);
   } else {
     return {
       success: false,
@@ -78,6 +95,14 @@ export function executeTransaction(
       halted: true
     };
   }
+
+  // Calculate Shadow Track Prediction & Check Trust Threshold Deviation
+  const shadowPrediction = getShadowPrediction(ledger, seed);
+  const deviation = Math.abs(proposedValue - shadowPrediction);
+  const isSynthetic = shadowTrackEnabled && (deviation > threshold);
+
+  // If deviation exceeds trust threshold, gracefully degrade by using Shadow Track projection
+  const postValue = isSynthetic ? shadowPrediction : proposedValue;
 
   const postState: State = { value: postValue, logical_clock: postClock };
   const stepHash = calculateStepHash(index, event, preState, postState);
@@ -94,7 +119,9 @@ export function executeTransaction(
       input_event: event,
       pre_state: preState,
       post_state: postState,
-      hash: stepHash
+      hash: stepHash,
+      is_synthetic: isSynthetic,
+      shadow_prediction: shadowPrediction
     },
     chain_hash: chainHash
   };
@@ -106,7 +133,12 @@ export function executeTransaction(
   };
 }
 
-export function verifyLedger(seed: number, ledger: Block[]): FalsificationReport {
+export function verifyLedger(
+  seed: number,
+  ledger: Block[],
+  threshold: number = 50,
+  shadowTrackEnabled: boolean = true
+): FalsificationReport {
   let virtualState: State = { value: seed, logical_clock: 0 };
   let expectedPrevHash = calculateSeedHash(seed);
 
@@ -135,15 +167,15 @@ export function verifyLedger(seed: number, ledger: Block[]): FalsificationReport
     }
 
     const event = step.input_event;
-    let postValue = virtualState.value;
+    let proposedValue = virtualState.value;
     const postClock = virtualState.logical_clock + 1;
 
     if (event.startsWith("ADD:")) {
       const val = parseInt(event.slice(4), 10);
-      if (!isNaN(val)) postValue = wrappingAdd(postValue, val);
+      if (!isNaN(val)) proposedValue = wrappingAdd(proposedValue, val);
     } else if (event.startsWith("SUB:")) {
       const val = parseInt(event.slice(4), 10);
-      if (!isNaN(val)) postValue = wrappingSub(postValue, val);
+      if (!isNaN(val)) proposedValue = wrappingSub(proposedValue, val);
     } else {
       return {
         status: 'failed',
@@ -153,14 +185,32 @@ export function verifyLedger(seed: number, ledger: Block[]): FalsificationReport
       };
     }
 
-    const replayedPostState: State = { value: postValue, logical_clock: postClock };
+    // Check Shadow Track Prediction and Trust Threshold Deviation for Replay
+    const prefixLedger = ledger.slice(0, i);
+    const shadowPrediction = getShadowPrediction(prefixLedger, seed);
+    const deviation = Math.abs(proposedValue - shadowPrediction);
+    const expectedSynthetic = shadowTrackEnabled && (deviation > threshold);
+    const expectedValue = expectedSynthetic ? shadowPrediction : proposedValue;
 
-    // Falsification Rule 3: Replayed state post-hash drift
+    const replayedPostState: State = { value: expectedValue, logical_clock: postClock };
+
+    // Falsification Rule 3: Replayed state post-hash drift (which now checks shadow prediction correctness)
     if (step.post_state.value !== replayedPostState.value || step.post_state.logical_clock !== replayedPostState.logical_clock) {
       return {
         status: 'failed',
         rule: 3,
         message: `FALSIFICATION_FAILURE: Transition logic drift at step ${i}. Replayed output (val: ${replayedPostState.value}, clock: ${replayedPostState.logical_clock}) diverges from recorded output (val: ${step.post_state.value}, clock: ${step.post_state.logical_clock}).`,
+        index: i
+      };
+    }
+
+    // Verify synthetic metadata flag matches replayed expectations
+    const blockSynthetic = !!step.is_synthetic;
+    if (blockSynthetic !== expectedSynthetic) {
+      return {
+        status: 'failed',
+        rule: 3,
+        message: `FALSIFICATION_FAILURE: Synthetic flag mismatch at step ${i}. Expected ${expectedSynthetic} (deviation ${deviation} vs threshold ${threshold}), but block recorded is_synthetic: ${blockSynthetic}.`,
         index: i
       };
     }

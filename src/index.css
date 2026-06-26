@@ -5,4 +5,37 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Sleek Interface Theme Colors */
+  --color-sleek-bg: #0A0C10;
+  --color-sleek-card: #161B22;
+  --color-sleek-border: #30363D;
+  --color-sleek-sidebar: #0D1117;
+  --color-sleek-text: #E6EDF3;
+  --color-sleek-text-muted: #8B949E;
+  --color-sleek-accent: #79C0FF;
+  --color-sleek-success: #3FB950;
+  --color-sleek-success-dark: #238636;
+}
+
+/* Custom radial pattern styling from Sleek Interface */
+.sleek-grid-bg {
+  background-image: radial-gradient(#30363d 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Hide scrollbars elegantly */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0C10;
+}
+::-webkit-scrollbar-thumb {
+  background: #30363D;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #8B949E;
 }
