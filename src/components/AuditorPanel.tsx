@@ -4,20 +4,25 @@
  */
 
 import React, { useState } from 'react';
-import { ShieldCheck, ShieldAlert, Check, Copy, Download, HeartPulse, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Check, Copy, Download, HeartPulse, FileText, ChevronDown, ChevronUp, Activity } from 'lucide-react';
 import { Block, FalsificationReport } from '../types';
 import { playClick, playSuccess } from '../utils/audio';
+import { VarianceChart } from './VarianceChart';
 
 interface AuditorPanelProps {
   auditReport: FalsificationReport;
   ledger: Block[];
   onHealLedger: () => void;
+  threshold: number;
+  shadowTrackEnabled: boolean;
 }
 
 export const AuditorPanel: React.FC<AuditorPanelProps> = ({
   auditReport,
   ledger,
   onHealLedger,
+  threshold,
+  shadowTrackEnabled,
 }) => {
   const [copied, setCopied] = useState(false);
   const [showJson, setShowJson] = useState(false);
@@ -149,7 +154,30 @@ export const AuditorPanel: React.FC<AuditorPanelProps> = ({
         )}
       </div>
 
-      {/* 2. Interactive JSON Exporter */}
+      {/* 2. Real-time Trust Decay & Variance Chart */}
+      <div className="bg-sleek-card border border-sleek-border rounded-xl p-4 flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4.5 h-4.5 text-indigo-400" />
+            <h3 className="font-display font-semibold text-sleek-text text-sm tracking-tight">
+              Trust Decay Monitor
+            </h3>
+          </div>
+          <span className="text-[9px] font-mono font-bold bg-indigo-950/40 border border-indigo-500/40 text-indigo-400 px-2 py-0.5 rounded-full uppercase">
+            Last 20 Blocks
+          </span>
+        </div>
+        <p className="text-sleek-text-muted text-[11px] leading-relaxed">
+          Plots the absolute variance between primary inputs (cyan <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#06b6d4]"></span>) and shadow track predictions (indigo <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#818cf8]"></span>).
+        </p>
+        <VarianceChart
+          ledger={ledger}
+          threshold={threshold}
+          shadowTrackEnabled={shadowTrackEnabled}
+        />
+      </div>
+
+      {/* 3. Interactive JSON Exporter */}
       <div className="bg-sleek-card border border-sleek-border rounded-xl p-4">
         <button
           onClick={() => { playClick(); setShowJson(!showJson); }}

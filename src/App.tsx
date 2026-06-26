@@ -344,6 +344,8 @@ export default function App() {
             auditReport={auditReport}
             ledger={ledger}
             onHealLedger={handleHealLedger}
+            threshold={threshold}
+            shadowTrackEnabled={shadowTrackEnabled}
           />
 
           {/* Mathematical equations and Rust code spec panel */}
