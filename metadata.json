@@ -1,0 +1,6 @@
+{
+  "name": "Verifiable Execution Kernel Auditor",
+  "description": "An interactive cryptographic simulator and verification auditor for VEK-Core v0.1.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
